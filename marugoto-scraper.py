@@ -58,7 +58,7 @@ audioPattern = re.compile('^([^_]+)-([0-9]+)$')
 audioExtension = '.mp3'
 
 
-def getAudioFilename(rawID: str) -> str:
+def audioFilename(rawID: str) -> str:
     return audioPattern.sub(r'\1W_\2', rawID) + audioExtension
 
 
@@ -86,7 +86,7 @@ def extractRows(jsonRep: dict) -> List[List[str]]:
             word['KANJI'],
             word['ROMAJI'],
             word['UWRD'],
-            '[sound:' + getAudioFilename(word['RAWID']) + ']',
+            '[sound:' + audioFilename(word['RAWID']) + ']',
             ' '.join(extractTags(word['ATTR']))
         ]
 
@@ -110,7 +110,7 @@ def downloadAudio(rawID: str, basePath: str) -> None:
     onlineURL = baseURL + getAudioPath(rawID)
     if not os.path.isdir(basePath):
         os.makedirs(basePath)
-    localPath = os.path.join(basePath, getAudioFilename(rawID))
+    localPath = os.path.join(basePath, audioFilename(rawID))
     with urllib.request.urlopen(onlineURL) as onlineAudioFile:
         onlineFileInfo = onlineAudioFile.info()
         if not isDownloaded(onlineFileInfo, localPath):
