@@ -121,13 +121,17 @@ def downloadAudio(rawID: str, basePath: str) -> None:
                 shutil.copyfileobj(onlineAudioFile, localAudioFile)
             os.utime(localPath, (onlineModifiedTime, onlineModifiedTime))
         else:
-            logging.info('Already downloaded ' + localPath)
+            logging.debug('Already downloaded ' + localPath)
 
 
 def downloadAllAudio(jsonRep, basePath: str) -> None:
     logging.info('Starting audio downloads')
     for word in jsonRep['DATA']:
-        downloadAudio(word['RAWID'], basePath)
+        try:
+            downloadAudio(word['RAWID'], basePath)
+        except urllib.error.HTTPError:
+            logging.warning('Could not download ' +
+                            audioFilename(word['RAWID']))
     logging.info('Audio downloads completed')
 
 
