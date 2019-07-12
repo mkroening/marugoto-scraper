@@ -141,25 +141,22 @@ available_level_ids = ['A1', 'A2-1', 'A2-2']
 available_language_ids = ['en', 'es', 'id', 'th', 'zh', 'vi', 'fr']
 
 
-def download_words(level_ids: Sequence[str] = available_level_ids,
-                   language_ids: Sequence[str] = available_language_ids
-                   ) -> None:
+def download_words(language_id: str,
+                   level_ids: Sequence[str] = available_level_ids) -> None:
     base_path = 'words'
     session = Session()
-    for language_id in language_ids:
-        for level_id in level_ids:
-            if not os.path.isdir(base_path):
-                os.makedirs(base_path)
-            local_path = os.path.join(
-                base_path,
-                base_name + '-' + language_id + '-' + level_id + '.csv')
-            logging.info('Exporting ' + language_id + '-' + level_id)
-            json_rep = session.get(words_url(language_id, level_id)).json()
-            rows = extract_rows(json_rep)
-            with open(local_path, 'w') as output_csv_file:
-                writer = csv.writer(output_csv_file, delimiter=delimiter)
-                writer.writerows(rows)
-            logging.info('Exported to ' + local_path)
+    for level_id in level_ids:
+        if not os.path.isdir(base_path):
+            os.makedirs(base_path)
+        local_path = os.path.join(
+            base_path, base_name + '-' + language_id + '-' + level_id + '.csv')
+        logging.info('Exporting ' + language_id + '-' + level_id)
+        json_rep = session.get(words_url(language_id, level_id)).json()
+        rows = extract_rows(json_rep)
+        with open(local_path, 'w') as output_csv_file:
+            writer = csv.writer(output_csv_file, delimiter=delimiter)
+            writer.writerows(rows)
+        logging.info('Exported to ' + local_path)
 
 
 def download_audios(level_ids: Sequence[str] = available_level_ids) -> None:
@@ -174,5 +171,5 @@ def download_audios(level_ids: Sequence[str] = available_level_ids) -> None:
 
 
 if __name__ == '__main__':
-    download_words()
+    download_words('en')
     download_audios()
