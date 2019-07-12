@@ -17,12 +17,6 @@ delimiter = '|'
 base_url = 'https://words.marugotoweb.jp/'
 base_name = 'MARUGOTO-NO-KOTOBA'
 
-level_ids = [
-    'A1',
-    'A2-1',
-    'A2-2'
-]
-
 
 def level_query(level_id: str) -> str:
     return '&lv=' + level_id
@@ -33,16 +27,6 @@ topic_query = '&tp=1,2,3,4,5,6,7,8,9'
 lesson_query = '&ls=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18'
 
 text_query = '&tx=act,comp,vocab'
-
-language_ids = [
-    'en',
-    'es',
-    'id',
-    'th',
-    'zh',
-    'vi',
-    'fr'
-]
 
 
 def language_query(language_id: str) -> str:
@@ -135,7 +119,13 @@ def download_all_audio(json_rep, base_path: str) -> None:
     logging.info('_audio downloads completed for level ' + json_rep['LV'])
 
 
-def download_words() -> None:
+available_level_ids = ['A1', 'A2-1', 'A2-2']
+
+available_language_ids = ['en', 'es', 'id', 'th', 'zh', 'vi', 'fr']
+
+
+def download_words(level_ids: List[str] = available_level_ids,
+                   language_ids: List[str] = available_language_ids) -> None:
     base_path = 'words'
     for language_id in language_ids:
         for level_id in level_ids:
@@ -153,7 +143,7 @@ def download_words() -> None:
             logging.info('Exported to ' + local_path)
 
 
-def download_audios() -> None:
+def download_audios(level_ids: List[str] = available_level_ids) -> None:
     for level_id in level_ids:
         with urllib.request.urlopen(words_url('en', level_id)) as input_json_file:
             json_rep = json.loads(input_json_file.read().decode('utf-8'))
