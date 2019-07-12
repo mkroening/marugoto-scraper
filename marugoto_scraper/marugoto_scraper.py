@@ -144,14 +144,15 @@ available_language_ids = ['en', 'es', 'id', 'th', 'zh', 'vi', 'fr']
 def download_words(language_id: str,
                    level_ids: Sequence[str] = available_level_ids) -> None:
     base_path = 'words'
-    session = Session()
-    for level_id in level_ids:
+    session = FuturesSession()
+    futures = {level_id : session.get(words_url(language_id, level_id)) for level_id in level_ids}
+    for level_id, future in futures.items():
         if not os.path.isdir(base_path):
             os.makedirs(base_path)
         local_path = os.path.join(
             base_path, base_name + '-' + language_id + '-' + level_id + '.csv')
         logging.info('Exporting ' + language_id + '-' + level_id)
-        json_rep = session.get(words_url(language_id, level_id)).json()
+        json_rep = future.result().json()
         rows = extract_rows(json_rep)
         with open(local_path, 'w') as output_csv_file:
             writer = csv.writer(output_csv_file, delimiter=delimiter)
