@@ -43,7 +43,7 @@ def words_api_params(language_id: str,
     }
 
 
-audio_path_prefix = '/res/keyword/audio/'
+audio_base_url = base_url + '/res/keyword/audio'
 audio_pattern = re.compile('^([^_]+)-([0-9]+)$')
 audio_extension = '.mp3'
 
@@ -52,9 +52,9 @@ def audio_filename(raw_id: str) -> str:
     return audio_pattern.sub(r'\1W_\2', raw_id) + audio_extension
 
 
-def get_audio_path(raw_id: str) -> str:
-    return audio_path_prefix + audio_pattern.sub(r'\1W/\1W_\2',
-                                                 raw_id) + audio_extension
+def audio_url(raw_id: str) -> str:
+    return audio_base_url + '/' + audio_pattern.sub(r'\1W/\1W_\2',
+                                                    raw_id) + audio_extension
 
 
 def extract_tags(attributes: Dict[str, Dict[str, str]]) -> List[str]:
@@ -99,7 +99,7 @@ def download_audio(raw_ids: Iterable[str], prefix: str) -> None:
         os.makedirs(prefix)
     session = FuturesSession()
     futures = {
-        raw_id: session.get(base_url + get_audio_path(raw_id), stream=True)
+        raw_id: session.get(audio_url(raw_id), stream=True)
         for raw_id in raw_ids
     }
     for raw_id, future in futures.items():
