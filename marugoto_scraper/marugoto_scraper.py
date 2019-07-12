@@ -11,6 +11,7 @@ from typing import Dict, List, Sequence
 
 from requests import Session
 from requests.exceptions import HTTPError
+from requests_futures.sessions import FuturesSession
 
 logging.basicConfig(level=logging.INFO)
 
@@ -109,11 +110,15 @@ def download_all_audio(json_rep, base_path: str) -> None:
     logging.info('Starting audio downloads for level ' + json_rep['LV'])
     if not os.path.isdir(base_path):
         os.makedirs(base_path)
-    session = Session()
-    for word in json_rep['DATA']:
-        online_url = base_url + get_audio_path(word['RAWID'])
-        local_path = os.path.join(base_path, audio_filename(word['RAWID']))
-        response = session.get(online_url, stream=True)
+    session = FuturesSession()
+    raw_ids = [word['RAWID'] for word in json_rep['DATA']]
+    futures = {
+        raw_id: session.get(base_url + get_audio_path(raw_id), stream=True)
+        for raw_id in raw_ids
+    }
+    for raw_id, future in futures.items():
+        local_path = os.path.join(base_path, audio_filename(raw_id))
+        response = future.result()
         try:
             response.raise_for_status()
             if not is_downloaded(response.headers, local_path):
@@ -128,8 +133,7 @@ def download_all_audio(json_rep, base_path: str) -> None:
             else:
                 logging.debug('Already downloaded ' + local_path)
         except HTTPError:
-            logging.warning('Could not download ' +
-                            audio_filename(word['RAWID']))
+            logging.warning('Could not download ' + audio_filename(raw_id))
     logging.info('_audio downloads completed for level ' + json_rep['LV'])
 
 
