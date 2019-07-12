@@ -17,44 +17,30 @@ logging.basicConfig(level=logging.INFO)
 
 delimiter = '|'
 
-base_url = 'https://words.marugotoweb.jp/'
+base_url = 'https://words.marugotoweb.jp'
 base_name = 'MARUGOTO-NO-KOTOBA'
 
-
-def level_query(level_id: str) -> str:
-    return '&lv=' + level_id
+words_api_url = base_url + '/SearchCategoryAPI'
 
 
-def topic_query(topics: Sequence[int] = None) -> str:
+def words_api_params(language_id: str,
+                     level_id: str,
+                     topics: Sequence[int] = None,
+                     lessons: Sequence[int] = None,
+                     texts: Sequence[str] = None) -> Dict[str, str]:
     if topics is None:
         topics = range(1, 10)
-    return '&tp=' + ','.join(str(i) for i in topics)
-
-
-def lesson_query(lessons: Sequence[int] = None) -> str:
     if lessons is None:
         lessons = range(1, 19)
-    return '&ls=' + ','.join(str(i) for i in lessons)
-
-
-def text_query(texts: Sequence[str] = None) -> str:
     if texts is None:
         texts = ['act', 'comp', 'vocab']
-    return '&tx=' + ','.join(texts)
-
-
-def language_query(language_id: str) -> str:
-    return '&ut=' + language_id
-
-
-def words_url(language_id: str,
-              level_id: str,
-              topics: Sequence[int] = None,
-              lessons: Sequence[int] = None,
-              texts: Sequence[str] = None) -> str:
-    return base_url + 'SearchCategoryAPI?' + level_query(
-        level_id) + topic_query(topics) + lesson_query(lessons) + text_query(
-            texts) + language_query(language_id)
+    return {
+        'lv': level_id,
+        'tp': ','.join(str(topic) for topic in topics),
+        'ls': ','.join(str(lesson) for lesson in lessons),
+        'tx': ','.join(texts),
+        'ut': language_id
+    }
 
 
 audio_path_prefix = '/res/keyword/audio/'
@@ -145,7 +131,11 @@ def download_words(language_id: str,
                    level_ids: Sequence[str] = available_level_ids) -> None:
     base_path = 'words'
     session = FuturesSession()
-    futures = {level_id : session.get(words_url(language_id, level_id)) for level_id in level_ids}
+    futures = {
+        level_id: session.get(words_api_url,
+                              params=words_api_params(language_id, level_id))
+        for level_id in level_ids
+    }
     for level_id, future in futures.items():
         if not os.path.isdir(base_path):
             os.makedirs(base_path)
@@ -163,7 +153,8 @@ def download_words(language_id: str,
 def download_audios(level_ids: Sequence[str] = available_level_ids) -> None:
     session = Session()
     for level_id in level_ids:
-        json_rep = session.get(words_url('en', level_id)).json()
+        json_rep = session.get(words_api_url,
+                               params=words_api_params('en', level_id)).json()
         prefix = os.path.join('media', base_name + '-' + level_id)
         raw_ids = [word['RAWID'] for word in json_rep['DATA']]
         logging.info('Starting audio downloads for level ' + level_id)
