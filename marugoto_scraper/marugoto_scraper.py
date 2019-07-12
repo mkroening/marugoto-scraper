@@ -7,7 +7,7 @@ import os
 import re
 import shutil
 import time
-from typing import Dict, List
+from typing import Dict, List, Sequence
 import urllib.request
 
 logging.basicConfig(level=logging.INFO)
@@ -122,8 +122,9 @@ available_level_ids = ['A1', 'A2-1', 'A2-2']
 available_language_ids = ['en', 'es', 'id', 'th', 'zh', 'vi', 'fr']
 
 
-def download_words(level_ids: List[str] = available_level_ids,
-                   language_ids: List[str] = available_language_ids) -> None:
+def download_words(level_ids: Sequence[str] = available_level_ids,
+                   language_ids: Sequence[str] = available_language_ids
+                   ) -> None:
     base_path = 'words'
     for language_id in language_ids:
         for level_id in level_ids:
@@ -143,7 +144,7 @@ def download_words(level_ids: List[str] = available_level_ids,
             logging.info('Exported to ' + local_path)
 
 
-def download_audios(level_ids: List[str] = available_level_ids) -> None:
+def download_audios(level_ids: Sequence[str] = available_level_ids) -> None:
     for level_id in level_ids:
         with urllib.request.urlopen(words_url('en',
                                               level_id)) as input_json_file:
