@@ -7,7 +7,7 @@ import os
 import re
 import shutil
 import time
-from typing import Dict, List, Sequence
+from typing import Dict, Iterable, List, Sequence
 
 from requests import Session
 from requests.exceptions import HTTPError
@@ -106,18 +106,18 @@ def is_downloaded(http_headers: Dict[str, str], path: str) -> bool:
     return True
 
 
-def download_all_audio(json_rep, base_path: str) -> None:
-    logging.info('Starting audio downloads for level ' + json_rep['LV'])
-    if not os.path.isdir(base_path):
-        os.makedirs(base_path)
+def download_audio(raw_ids: Iterable[str], prefix: str) -> None:
+    """Download audio files corresponding to raw_ids to prefix.
+    """
+    if not os.path.isdir(prefix):
+        os.makedirs(prefix)
     session = FuturesSession()
-    raw_ids = [word['RAWID'] for word in json_rep['DATA']]
     futures = {
         raw_id: session.get(base_url + get_audio_path(raw_id), stream=True)
         for raw_id in raw_ids
     }
     for raw_id, future in futures.items():
-        local_path = os.path.join(base_path, audio_filename(raw_id))
+        local_path = os.path.join(prefix, audio_filename(raw_id))
         response = future.result()
         try:
             response.raise_for_status()
@@ -134,7 +134,6 @@ def download_all_audio(json_rep, base_path: str) -> None:
                 logging.debug('Already downloaded ' + local_path)
         except HTTPError:
             logging.warning('Could not download ' + audio_filename(raw_id))
-    logging.info('_audio downloads completed for level ' + json_rep['LV'])
 
 
 available_level_ids = ['A1', 'A2-1', 'A2-2']
@@ -167,8 +166,11 @@ def download_audios(level_ids: Sequence[str] = available_level_ids) -> None:
     session = Session()
     for level_id in level_ids:
         json_rep = session.get(words_url('en', level_id)).json()
-        download_all_audio(json_rep,
-                           os.path.join('media', base_name + '-' + level_id))
+        prefix = os.path.join('media', base_name + '-' + level_id)
+        raw_ids = [word['RAWID'] for word in json_rep['DATA']]
+        logging.info('Starting audio downloads for level ' + level_id)
+        download_audio(raw_ids, prefix)
+        logging.info('_audio downloads completed for level ' + level_id)
 
 
 if __name__ == '__main__':
