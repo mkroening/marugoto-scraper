@@ -8,7 +8,9 @@ import re
 import shutil
 import time
 from typing import Dict, List, Sequence
-import urllib.request
+
+from requests import Session
+from requests.exceptions import HTTPError
 
 logging.basicConfig(level=logging.INFO)
 
@@ -88,45 +90,44 @@ def extract_rows(json_rep: dict) -> List[List[str]]:
         ]
 
 
-def is_downloaded(online_file_info, path: str) -> bool:
+def is_downloaded(http_headers: Dict[str, str], path: str) -> bool:
     if not os.path.isfile(path):
         return False
     local_file_size = os.path.getsize(path)
-    online_file_size = int(online_file_info['Content-Length'])
+    online_file_size = int(http_headers['Content-Length'])
     if local_file_size != online_file_size:
         return False
     local_modified_time = os.path.getmtime(path)
     online_modified_time = time.mktime(
-        email.utils.parsedate(online_file_info['Last-Modified']))
+        email.utils.parsedate(http_headers['Last-Modified']))
     if local_modified_time != online_modified_time:
         return False
     return True
 
 
-def download_audio(raw_id: str, base_path: str) -> None:
-    online_url = base_url + get_audio_path(raw_id)
-    if not os.path.isdir(base_path):
-        os.makedirs(base_path)
-    local_path = os.path.join(base_path, audio_filename(raw_id))
-    with urllib.request.urlopen(online_url) as online_audio_file:
-        online_file_info = online_audio_file.info()
-        if not is_downloaded(online_file_info, local_path):
-            logging.info('Downloading ' + local_path)
-            online_modified_time = time.mktime(
-                email.utils.parsedate(online_file_info['Last-Modified']))
-            with open(local_path, 'wb') as local_audio_file:
-                shutil.copyfileobj(online_audio_file, local_audio_file)
-            os.utime(local_path, (online_modified_time, online_modified_time))
-        else:
-            logging.debug('Already downloaded ' + local_path)
-
-
 def download_all_audio(json_rep, base_path: str) -> None:
     logging.info('Starting audio downloads for level ' + json_rep['LV'])
+    if not os.path.isdir(base_path):
+        os.makedirs(base_path)
+    session = Session()
     for word in json_rep['DATA']:
+        online_url = base_url + get_audio_path(word['RAWID'])
+        local_path = os.path.join(base_path, audio_filename(word['RAWID']))
+        response = session.get(online_url, stream=True)
         try:
-            download_audio(word['RAWID'], base_path)
-        except urllib.error.HTTPError:
+            response.raise_for_status()
+            if not is_downloaded(response.headers, local_path):
+                logging.info('Downloading ' + local_path)
+                with open(local_path, 'wb') as local_audio_file:
+                    for chunk in response.iter_content(chunk_size=128):
+                        local_audio_file.write(chunk)
+                online_modified_time = time.mktime(
+                    email.utils.parsedate(response.headers['Last-Modified']))
+                os.utime(local_path,
+                         (online_modified_time, online_modified_time))
+            else:
+                logging.debug('Already downloaded ' + local_path)
+        except HTTPError:
             logging.warning('Could not download ' +
                             audio_filename(word['RAWID']))
     logging.info('_audio downloads completed for level ' + json_rep['LV'])
@@ -141,6 +142,7 @@ def download_words(level_ids: Sequence[str] = available_level_ids,
                    language_ids: Sequence[str] = available_language_ids
                    ) -> None:
     base_path = 'words'
+    session = Session()
     for language_id in language_ids:
         for level_id in level_ids:
             if not os.path.isdir(base_path):
@@ -149,9 +151,7 @@ def download_words(level_ids: Sequence[str] = available_level_ids,
                 base_path,
                 base_name + '-' + language_id + '-' + level_id + '.csv')
             logging.info('Exporting ' + language_id + '-' + level_id)
-            with urllib.request.urlopen(words_url(
-                    language_id, level_id)) as input_json_file:
-                json_rep = json.loads(input_json_file.read().decode('utf-8'))
+            json_rep = session.get(words_url(language_id, level_id)).json()
             rows = extract_rows(json_rep)
             with open(local_path, 'w') as output_csv_file:
                 writer = csv.writer(output_csv_file, delimiter=delimiter)
@@ -160,10 +160,9 @@ def download_words(level_ids: Sequence[str] = available_level_ids,
 
 
 def download_audios(level_ids: Sequence[str] = available_level_ids) -> None:
+    session = Session()
     for level_id in level_ids:
-        with urllib.request.urlopen(words_url('en',
-                                              level_id)) as input_json_file:
-            json_rep = json.loads(input_json_file.read().decode('utf-8'))
+        json_rep = session.get(words_url('en', level_id)).json()
         download_all_audio(json_rep,
                            os.path.join('media', base_name + '-' + level_id))
 
