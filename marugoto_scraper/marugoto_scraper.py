@@ -22,21 +22,36 @@ def level_query(level_id: str) -> str:
     return '&lv=' + level_id
 
 
-topic_query = '&tp=1,2,3,4,5,6,7,8,9'
+def topic_query(topics: Sequence[int] = None) -> str:
+    if topics is None:
+        topics = range(1, 10)
+    return '&tp=' + ','.join(str(i) for i in topics)
 
-lesson_query = '&ls=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18'
 
-text_query = '&tx=act,comp,vocab'
+def lesson_query(lessons: Sequence[int] = None) -> str:
+    if lessons is None:
+        lessons = range(1, 19)
+    return '&ls=' + ','.join(str(i) for i in lessons)
+
+
+def text_query(texts: Sequence[str] = None) -> str:
+    if texts is None:
+        texts = ['act', 'comp', 'vocab']
+    return '&tx=' + ','.join(texts)
 
 
 def language_query(language_id: str) -> str:
     return '&ut=' + language_id
 
 
-def words_url(language_id: str, level_id: str) -> str:
+def words_url(language_id: str,
+              level_id: str,
+              topics: Sequence[int] = None,
+              lessons: Sequence[int] = None,
+              texts: Sequence[str] = None) -> str:
     return base_url + 'SearchCategoryAPI?' + level_query(
-        level_id) + topic_query + lesson_query + text_query + language_query(
-            language_id)
+        level_id) + topic_query(topics) + lesson_query(lessons) + text_query(
+            texts) + language_query(language_id)
 
 
 audio_path_prefix = '/res/keyword/audio/'
