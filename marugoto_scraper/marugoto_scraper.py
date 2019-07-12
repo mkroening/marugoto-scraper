@@ -34,7 +34,9 @@ def language_query(language_id: str) -> str:
 
 
 def words_url(language_id: str, level_id: str) -> str:
-    return base_url + 'SearchCategoryAPI?' + level_query(level_id) + topic_query + lesson_query + text_query + language_query(language_id)
+    return base_url + 'SearchCategoryAPI?' + level_query(
+        level_id) + topic_query + lesson_query + text_query + language_query(
+            language_id)
 
 
 audio_path_prefix = '/res/keyword/audio/'
@@ -47,30 +49,26 @@ def audio_filename(raw_id: str) -> str:
 
 
 def get_audio_path(raw_id: str) -> str:
-    return audio_path_prefix + audio_pattern.sub(r'\1W/\1W_\2', raw_id) + audio_extension
+    return audio_path_prefix + audio_pattern.sub(r'\1W/\1W_\2',
+                                                 raw_id) + audio_extension
 
 
 def extract_tags(attributes: Dict[str, Dict[str, str]]) -> List[str]:
     mapped_attributes = [[
-        attribute['level'],
-        attribute['utext'],
-        'Topic' + attribute['topic'],
+        attribute['level'], attribute['utext'], 'Topic' + attribute['topic'],
         'Lesson' + attribute['lesson']
     ] for attribute in attributes]
     flat_attributes = [
-        attribute for sublist in mapped_attributes for attribute in sublist]
+        attribute for sublist in mapped_attributes for attribute in sublist
+    ]
     return sorted(list(set(flat_attributes)))
 
 
 def extract_rows(json_rep: dict) -> List[List[str]]:
     for word in json_rep['DATA']:
         yield [
-            word['RAWID'],
-            word['KANA'],
-            word['KANJI'],
-            word['ROMAJI'],
-            word['UWRD'],
-            '[sound:' + audio_filename(word['RAWID']) + ']',
+            word['RAWID'], word['KANA'], word['KANJI'], word['ROMAJI'],
+            word['UWRD'], '[sound:' + audio_filename(word['RAWID']) + ']',
             ' '.join(extract_tags(word['ATTR']))
         ]
 
@@ -132,9 +130,11 @@ def download_words(level_ids: List[str] = available_level_ids,
             if not os.path.isdir(base_path):
                 os.makedirs(base_path)
             local_path = os.path.join(
-                base_path, base_name + '-' + language_id + '-' + level_id + '.csv')
+                base_path,
+                base_name + '-' + language_id + '-' + level_id + '.csv')
             logging.info('Exporting ' + language_id + '-' + level_id)
-            with urllib.request.urlopen(words_url(language_id, level_id)) as input_json_file:
+            with urllib.request.urlopen(words_url(
+                    language_id, level_id)) as input_json_file:
                 json_rep = json.loads(input_json_file.read().decode('utf-8'))
             rows = extract_rows(json_rep)
             with open(local_path, 'w') as output_csv_file:
@@ -145,9 +145,11 @@ def download_words(level_ids: List[str] = available_level_ids,
 
 def download_audios(level_ids: List[str] = available_level_ids) -> None:
     for level_id in level_ids:
-        with urllib.request.urlopen(words_url('en', level_id)) as input_json_file:
+        with urllib.request.urlopen(words_url('en',
+                                              level_id)) as input_json_file:
             json_rep = json.loads(input_json_file.read().decode('utf-8'))
-        download_all_audio(json_rep, os.path.join('media', base_name + '-' + level_id))
+        download_all_audio(json_rep,
+                           os.path.join('media', base_name + '-' + level_id))
 
 
 if __name__ == '__main__':
