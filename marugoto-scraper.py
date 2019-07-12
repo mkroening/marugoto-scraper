@@ -125,14 +125,14 @@ def downloadAudio(rawID: str, basePath: str) -> None:
 
 
 def downloadAllAudio(jsonRep, basePath: str) -> None:
-    logging.info('Starting audio downloads')
+    logging.info('Starting audio downloads for level ' + jsonRep['LV'])
     for word in jsonRep['DATA']:
         try:
             downloadAudio(word['RAWID'], basePath)
         except urllib.error.HTTPError:
             logging.warning('Could not download ' +
                             audioFilename(word['RAWID']))
-    logging.info('Audio downloads completed')
+    logging.info('Audio downloads completed for level ' + jsonRep['LV'])
 
 
 basePath = 'words'
