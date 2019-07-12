@@ -135,23 +135,31 @@ def download_all_audio(json_rep, base_path: str) -> None:
     logging.info('_audio downloads completed for level ' + json_rep['LV'])
 
 
-base_path = 'words'
-for language_id in language_ids:
-    for level_id in level_ids:
-        if not os.path.isdir(base_path):
-            os.makedirs(base_path)
-        local_path = os.path.join(
-            base_path, base_name + '-' + language_id + '-' + level_id + '.csv')
-        logging.info('Exporting ' + language_id + '-' + level_id)
-        with urllib.request.urlopen(words_url(language_id, level_id)) as input_json_file:
-            json_rep = json.loads(input_json_file.read().decode('utf-8'))
-        rows = extract_rows(json_rep)
-        with open(local_path, 'w') as output_csv_file:
-            writer = csv.writer(output_csv_file, delimiter=delimiter)
-            writer.writerows(rows)
-        logging.info('Exported to ' + local_path)
+def download_words() -> None:
+    base_path = 'words'
+    for language_id in language_ids:
+        for level_id in level_ids:
+            if not os.path.isdir(base_path):
+                os.makedirs(base_path)
+            local_path = os.path.join(
+                base_path, base_name + '-' + language_id + '-' + level_id + '.csv')
+            logging.info('Exporting ' + language_id + '-' + level_id)
+            with urllib.request.urlopen(words_url(language_id, level_id)) as input_json_file:
+                json_rep = json.loads(input_json_file.read().decode('utf-8'))
+            rows = extract_rows(json_rep)
+            with open(local_path, 'w') as output_csv_file:
+                writer = csv.writer(output_csv_file, delimiter=delimiter)
+                writer.writerows(rows)
+            logging.info('Exported to ' + local_path)
 
-for level_id in level_ids:
-    with urllib.request.urlopen(words_url('en', level_id)) as input_json_file:
-        json_rep = json.loads(input_json_file.read().decode('utf-8'))
-    download_all_audio(json_rep, os.path.join('media', base_name + '-' + level_id))
+
+def download_audios() -> None:
+    for level_id in level_ids:
+        with urllib.request.urlopen(words_url('en', level_id)) as input_json_file:
+            json_rep = json.loads(input_json_file.read().decode('utf-8'))
+        download_all_audio(json_rep, os.path.join('media', base_name + '-' + level_id))
+
+
+if __name__ == '__main__':
+    download_words()
+    download_audios()
