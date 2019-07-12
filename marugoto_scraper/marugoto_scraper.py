@@ -7,7 +7,7 @@ import os
 import re
 import shutil
 import time
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Iterable, Iterator, List, Sequence
 
 from requests import Session
 from requests.exceptions import HTTPError
@@ -82,7 +82,7 @@ def extract_tags(attributes: Dict[str, Dict[str, str]]) -> List[str]:
     return sorted(list(set(flat_attributes)))
 
 
-def extract_rows(json_rep: dict) -> List[List[str]]:
+def extract_rows(json_rep: dict) -> Iterator[List[str]]:
     for word in json_rep['DATA']:
         yield [
             word['RAWID'], word['KANA'], word['KANJI'], word['ROMAJI'],
