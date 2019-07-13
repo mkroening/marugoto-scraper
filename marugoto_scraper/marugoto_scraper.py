@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import time
-from typing import Dict, Iterable, Iterator, List, Sequence
+from typing import Dict, Iterable, Iterator, List, Sequence, Union
 
 import requests
 from requests.exceptions import HTTPError
@@ -13,6 +13,8 @@ from requests_futures.sessions import FuturesSession
 
 import genanki
 from genanki import Deck, Model, Note, Package
+
+Words = Iterable[Dict[str, Union[str, None, List[Dict[str, str]]]]]
 
 logging.basicConfig(level=logging.INFO)
 
@@ -95,7 +97,7 @@ def is_downloaded(http_headers: Dict[str, str], path: str) -> bool:
     return True
 
 
-def download_audio(raw_ids: Iterable[str], prefix: str) -> None:
+def download_audio(raw_ids: Iterable[str], prefix: str = 'media') -> None:
     """Download audio files corresponding to raw_ids to prefix.
     """
     if not os.path.isdir(prefix):
@@ -195,12 +197,11 @@ class MarugotoNote(Note):
         return genanki.guid_for(self.fields[0])
 
 
-def download_words(language_id: str) -> None:
+def export_words(words: Words, file: str, media_prefix: str = 'media') -> None:
     deck = Deck(deck_id=1336548074,
                 name=base_name,
                 description='This deck was created using Marugoto Scraper.')
-    r = requests.get(words_api_url, params=words_api_params(language_id))
-    for word in r.json()['DATA']:
+    for word in words:
         deck.add_note(
             MarugotoNote(model=model,
                          fields=[
@@ -212,17 +213,14 @@ def download_words(language_id: str) -> None:
 
     package = Package(deck)
     package.media_files = [
-        'media/' + audio_filename(word['RAWID']) for word in r.json()['DATA']
+        media_prefix + '/' + audio_filename(word['RAWID']) for word in words
     ]
-    package.write_to_file(base_name + '-' + language_id + '.apkg')
-
-
-def download_audios() -> None:
-    r = requests.get(words_api_url, params=words_api_params())
-    raw_ids = [word['RAWID'] for word in r.json()['DATA']]
-    download_audio(raw_ids, 'media')
+    package.write_to_file(file)
 
 
 if __name__ == '__main__':
-    download_audios()
-    download_words('en')
+    language_id = 'en'
+    r = requests.get(words_api_url,
+                     params=words_api_params(language_id=language_id)).json()
+    download_audio(word['RAWID'] for word in r['DATA'])
+    export_words(r['DATA'], base_name + '-' + language_id + '.apkg')
