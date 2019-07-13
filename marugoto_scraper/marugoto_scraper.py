@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-import csv
 import email.utils
 import json
 import logging
 import os
 import re
-import shutil
 import time
 from typing import Dict, Iterable, Iterator, List, Sequence
 
 import requests
 from requests.exceptions import HTTPError
 from requests_futures.sessions import FuturesSession
+
+import genanki
+from genanki import Deck, Model, Note, Package
 
 logging.basicConfig(level=logging.INFO)
 
@@ -126,20 +127,94 @@ def download_audio(raw_ids: Iterable[str], prefix: str) -> None:
 
 available_language_ids = ['en', 'es', 'id', 'th', 'zh', 'vi', 'fr']
 
+fields = """
+- name: RawId
+- name: 漢字・かな
+- name: かな
+- name: ローマ字
+- name: 翻訳
+- name: 音声
+"""
+
+templates = """
+-
+  name: Card1
+  qfmt: >
+    {{音声}}
+    {{hint:漢字・かな}}<br/>
+    {{hint:かな}}<br/>
+    {{hint:ローマ字}}
+  afmt: >
+    {{FrontSide}}
+    <hr id=answer>
+      {{翻訳}}
+    </hr>
+-
+  name: Card2
+  qfmt: >
+    {{漢字・かな}}<br/><br/>
+    {{hint:かな}}<br/>
+    {{hint:ローマ字}}
+  afmt: >
+    {{FrontSide}}
+    <hr id=answer>
+      {{音声}}
+      {{翻訳}}
+    </hr>
+-
+  name: Card3
+  qfmt: >
+    {{翻訳}}
+  afmt: >
+    {{FrontSide}}
+    <hr id=answer>
+      {{音声}}
+      {{漢字・かな}}<br/><br/>
+      {{hint:かな}}<br/>
+      {{hint:ローマ字}}
+    </hr>
+"""
+
+style = """
+.card {
+  font-size: 20px;
+  text-align: center;
+}
+"""
+
+model = Model(model_id=1237599646,
+              name=base_name,
+              fields=fields,
+              templates=templates,
+              css=style)
+
+
+class MarugotoNote(Note):
+    @property
+    def guid(self):
+        return genanki.guid_for(self.fields[0])
+
 
 def download_words(language_id: str) -> None:
-    base_path = 'words'
-    if not os.path.isdir(base_path):
-        os.makedirs(base_path)
-    local_path = os.path.join(base_path,
-                              base_name + '-' + language_id + '.csv')
-    logging.info('Exporting ' + language_id)
-    r = requests.get(words_api_url, params=words_api_params())
-    rows = extract_rows(r.json())
-    with open(local_path, 'w') as output_csv_file:
-        writer = csv.writer(output_csv_file, delimiter=delimiter)
-        writer.writerows(rows)
-    logging.info('Exported to ' + local_path)
+    deck = Deck(deck_id=1336548074,
+                name=base_name,
+                description='This deck was created using Marugoto Scraper.')
+    r = requests.get(words_api_url, params=words_api_params(language_id))
+    for word in r.json()['DATA']:
+        deck.add_note(
+            MarugotoNote(model=model,
+                         fields=[
+                             word['RAWID'], word['KANJI'], word['KANA'],
+                             word['ROMAJI'], word['UWRD'],
+                             '[sound:' + audio_filename(word['RAWID']) + ']'
+                         ],
+                         tags=extract_tags(word['ATTR'])))
+
+    package = Package(deck)
+    package.media_files = [
+        'media/' + audio_filename(word['RAWID']) for word in r.json()['DATA']
+    ]
+    package.write_to_file(base_name + '-' + language_id + '.apkg')
 
 
 def download_audios() -> None:
@@ -149,5 +224,5 @@ def download_audios() -> None:
 
 
 if __name__ == '__main__':
-    download_words('en')
     download_audios()
+    download_words('en')

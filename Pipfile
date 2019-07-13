@@ -8,6 +8,7 @@ verify_ssl = true
 [packages]
 requests = "*"
 requests-futures = "*"
+genanki = "*"
 
 [requires]
 python_version = "3.7"
