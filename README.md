@@ -10,6 +10,7 @@ extracted words and their audio files are being converted into
 Run the script with:
 
 ```bash
+$ pipenv install
 $ pipenv run python marugoto_scraper/marugoto_scraper.py
 ```
 
